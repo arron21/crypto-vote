@@ -8,8 +8,7 @@ class Transaction {
     }
 
     toString() {
-        const json = [ this.item, this.payer, this.payee ];
-        return JSON.stringify(json);
+        return JSON.stringify([ this.item, this.payer, this.payee ]);
     }
 }
 
