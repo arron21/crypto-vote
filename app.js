@@ -8,7 +8,7 @@ class Transaction {
     }
 
     toString() {
-        return JSON.stringify(this);
+        return JSON.stringify([ this.item, this.payer, this.payee ]);
     }
 }
 
