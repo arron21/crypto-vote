@@ -1,14 +1,14 @@
 const { generateKeyPairSync, createSign, createVerify, createHash, randomInt } = require('node:crypto');
 
-class Transaction {
-    constructor( item, payer, payee ) {
+class Vote {
+    constructor( item, previousVoter, currentVoter ) {
         this.item = item;
-        this.payer = payer;
-        this.payee = payee;
+        this.previousVoter = previousVoter;
+        this.currentVoter = currentVoter;
     }
 
     toString() {
-        return JSON.stringify([ this.item, this.payer, this.payee ]);
+        return JSON.stringify([ this.item, this.previousVoter, this.currentVoter ]);
     }
 }
 
@@ -37,7 +37,8 @@ class Chain {
     chain;
 
     constructor() {
-        this.chain = [new Block('', new Transaction(42, 'genesis', 'arron'))];
+        // https://www.rcvresources.org/history-of-rcv
+        this.chain = [new Block('', new Vote({alpha: 0, beta: 0, gamma: 0}, 'initial block', 'Denmark1850'))];
     }
 
     get lastBlock() {
@@ -49,10 +50,8 @@ class Chain {
         console.log('⛏️  mining...')
     
         while(true) {
-    
           const hash = createHash('md5');
           hash.update((nonce + solution).toString()).end();
-    
           const attempt = hash.digest('hex');
     
           if(attempt.slice(0,4) === '0000'){
@@ -67,21 +66,18 @@ class Chain {
     addBlock(item, publicKey, signature) {
         const verify = createVerify('sha256');
         verify.update(item.toString());
-    
         const isValid = verify.verify(publicKey, signature);
     
         if (isValid) {
           const newBlock = new Block(this.lastBlock.hash, item);
           this.mine(newBlock.nonce);
-          console.log(newBlock)
-          console.log('test:'+ item)
           this.chain.push(newBlock);
         }
 
     }
 }
 
-class Wallet {
+class Ballot {
     publicKey;
     privateKey;
 
@@ -99,26 +95,49 @@ class Wallet {
     }
 
 
-    sendItem(item, payeePublicKey) {
-        const transaction = new Transaction(item, this.publicKey, payeePublicKey);
+    sendItem(item, voterPublicKey) {
+        const vote = new Vote(item, this.publicKey, voterPublicKey);
         const sign = createSign('sha256');
-        console.log('etst2:' +transaction.toString())
-
-        sign.update(transaction.toString()).end();
+        sign.update(vote.toString()).end();
         const signature = sign.sign(this.privateKey);
-
-        console.log(signature)
-        Chain.instance.addBlock(transaction, this.publicKey, signature);
+        Chain.instance.addBlock(vote, this.publicKey, signature);
     }
 }
 
-const satoshi = new Wallet();
-const bob = new Wallet();
-const alice = new Wallet();
+
+function countVotes() {
+    const votes = Chain.instance.chain.map(block => block.item);
+    const justVotes = votes.map(vote => vote.item);
+    return justVotes.reduce((totals, obj) => {
+        const newTotals = { ...totals };
+    
+        for (const key in obj) {
+          if (newTotals.hasOwnProperty(key)) {
+            newTotals[key] += obj[key];
+          } else {
+            newTotals[key] = obj[key];
+          }
+        }
+    
+        return newTotals;
+      }, {});
+
+}
+
+// Initialize the ballot for everyone to send votes to
+const GLOBAL_BALLOT = new Ballot();
+
+// Send votes to the ballot
+const satoshi = new Ballot();
+satoshi.sendItem({alpha: 3, beta: 2, gamma: 1}, GLOBAL_BALLOT.publicKey);
+
+const bob = new Ballot();
+bob.sendItem({alpha: 2, beta: 1, gamma: 3}, GLOBAL_BALLOT.publicKey);
+
+const alice = new Ballot();
+alice.sendItem({alpha: 2, beta: 3, gamma: 1}, GLOBAL_BALLOT.publicKey);
 
 
-    satoshi.sendItem(50, bob.publicKey);
-    bob.sendItem(23, alice.publicKey);
-    alice.sendItem(5, bob.publicKey);
 
-console.log(Chain.instance)
+const results = countVotes()
+console.log(results)
