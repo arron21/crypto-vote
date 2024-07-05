@@ -1,6 +1,4 @@
-const { count } = require('node:console');
 const { generateKeyPairSync, createSign, createVerify, createHash, randomInt } = require('node:crypto');
-const { read } = require('node:fs');
 
 class Vote {
     constructor( item, previousVoter, currentVoter ) {
