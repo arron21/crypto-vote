@@ -126,17 +126,17 @@ function countVotes() {
 }
 
 // Initialize the ballot for everyone to send votes to
-const ballot = new Ballot();
+const GLOBAL_BALLOT = new Ballot();
 
 // Send votes to the ballot
 const satoshi = new Ballot();
-satoshi.sendItem({alpha: 3, beta: 2, gamma: 1}, ballot.publicKey);
+satoshi.sendItem({alpha: 3, beta: 2, gamma: 1}, GLOBAL_BALLOT.publicKey);
 
 const bob = new Ballot();
-bob.sendItem({alpha: 2, beta: 1, gamma: 3}, ballot.publicKey);
+bob.sendItem({alpha: 2, beta: 1, gamma: 3}, GLOBAL_BALLOT.publicKey);
 
 const alice = new Ballot();
-alice.sendItem({alpha: 2, beta: 3, gamma: 1}, ballot.publicKey);
+alice.sendItem({alpha: 2, beta: 3, gamma: 1}, GLOBAL_BALLOT.publicKey);
 
 
 
