@@ -70,7 +70,8 @@ class Chain {
     
         if (isValid) {
           const newBlock = new Block(this.lastBlock.hash, item);
-          this.mine(newBlock.nonce);
+        //   this.mine(newBlock.nonce);
+        // console.log('Casting vote, no mining');
           this.chain.push(newBlock);
         }
 
@@ -138,6 +139,30 @@ const alice = new Ballot();
 alice.sendItem({alpha: 2, beta: 3, gamma: 1}, GLOBAL_BALLOT.publicKey);
 
 
+function generateMockVotes(count) {
+    console.log('Generating mock votes');
+    const candidates = ['alpha', 'beta', 'gamma'];
+    for (let i = 0; i < count; i++) {
+      const values = [1, 2, 3];
+      const obj = {};
+      candidates.forEach(prop => {
+        const randomIndex = Math.floor(Math.random() * values.length);
+        obj[prop] = values.splice(randomIndex, 1)[0];
+      });
+
+      // create a Ballot for voter & send vote to ballot
+      // we need to create a way for a voter to access their ballot after it's been created
+      new Ballot().sendItem(obj, GLOBAL_BALLOT.publicKey);
+    }
+     console.log('Mock votes generated');
+  }
+
+
+function mockElection(voterCount) { 
+    generateMockVotes(voterCount);
+}
+
+mockElection(20);
 
 const results = countVotes()
 console.log(results)
