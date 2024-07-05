@@ -39,7 +39,8 @@ class Chain {
     chain;
 
     constructor() {
-        this.chain = [new Block('', new Vote({alpha: 0, beta: 0, gamma: 0}, 'genesis', 'arron'))];
+        // https://www.rcvresources.org/history-of-rcv
+        this.chain = [new Block('', new Vote({alpha: 0, beta: 0, gamma: 0}, 'initial block', 'Denmark1850'))];
     }
 
     get lastBlock() {
