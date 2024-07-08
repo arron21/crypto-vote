@@ -1,6 +1,6 @@
-<% if (locals.voterInfo) { %>
+<% if (locals.store) { %>
     <p>Voter Info:</p>
-    <% for (var key in voterInfo) { %> 
-        <p><%= key %> : <%= voterInfo[key] %></p>
+    <% for (var key in store.votesById) { %> 
+        <p><%= key %> : <%= store.votesById[key] %></p>
     <% } %>
 <% } %>

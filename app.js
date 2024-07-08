@@ -7,6 +7,14 @@ app.use(express.static('public'))
 app.set('views', './public')
 app.set('view engine', 'ejs')
 
+let _store = {
+  electionResults: {}, 
+  generatedVoterId : "",
+  countedVotes: {},
+  votesById: {},
+  error: ""
+}
+
 app.get('/', (req, res) => {
   res.render('index.ejs')
 })
@@ -23,18 +31,20 @@ app.get('/mock-election', (req, res) => {
     count = 10; //some default
   }
   let results = mockElection(count)
-  results.totalVotes = count;
-  res.render('index.ejs', { electionResults: results })
+  _store.electionResults = results
+  res.render('index.ejs', { store: _store })
 })
 
 app.get('/create-voter', (req, res) => {
   const results = generateMockVote()
-  res.render('index.ejs', { voterId : results })
+  _store.generatedVoterId = results;
+  res.render('index.ejs', { store: _store })
 })
 
 app.get('/count-votes', (req, res) => {
   const results = countVotes()
-  res.render('index.ejs', { electionCount: results })
+  _store.countedVotes = results;
+  res.render('index.ejs', { store: _store })
 })
 
 app.get('/get-vote-by-id', (req, res) => {
@@ -42,13 +52,12 @@ app.get('/get-vote-by-id', (req, res) => {
   const voterId = req.query.id
   try {
     const result = getVoteByName(voterId)
-    res.render('index.ejs', { voterInfo: result })
+    _store.votesById = result;
+    res.render('index.ejs', { store: _store })
   } catch (error) {
+    _store.error = 'The Voter ID does not exist, Are there any votes? Does your GET request have the correct ID? ex: http://localhost:3000/get-vote-by-id?id=23c16138-a31d-482c-a521-c388ad684780'
     console.log("🚀 ~ app.get ~ error:", error)
-    res.render('index.ejs', 
-      { voter : 
-        { error: 'The Voter ID does not exist, Are there any votes? Does your GET request have the correct ID? ex: http://localhost:3000/get-vote-by-id?id=23c16138-a31d-482c-a521-c388ad684780' }
-    })
+    res.render('index.ejs', { store: _store })
   }
 })
 /**

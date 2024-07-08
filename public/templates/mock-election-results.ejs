@@ -1,8 +1,8 @@
-<% if (locals.electionResults) { %>
+<% if (locals.store) { %>
     <p>Mock Election Results: votes cast</p>
     <ul>
-        <% for (var candidate in electionResults) { %>
-            <li><%= candidate %> : <%= electionResults[candidate] %></li>
+        <% for (var candidate in store.electionResults) { %>
+            <li><%= candidate %> : <%= store.electionResults[candidate] %></li>
         <% } %>
     </ul>
 <% } %>
