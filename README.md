@@ -1,3 +1,3 @@
 # crypto-vote
 
-run 'node app.js' to run the example
+run 'node npm run start' to start the express server http://localhost:3000/
