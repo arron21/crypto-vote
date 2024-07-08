@@ -1,0 +1,8 @@
+<% if (locals.electionResults) { %>
+    <p>Mock Election Results: votes cast</p>
+    <ul>
+        <% for (var candidate in electionResults) { %>
+            <li><%= candidate %> : <%= electionResults[candidate] %></li>
+        <% } %>
+    </ul>
+<% } %>

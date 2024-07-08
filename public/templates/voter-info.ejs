@@ -1,0 +1,6 @@
+<% if (locals.voterInfo) { %>
+    <p>Voter Info:</p>
+    <% for (var key in voterInfo) { %> 
+        <p><%= key %> : <%= voterInfo[key] %></p>
+    <% } %>
+<% } %>

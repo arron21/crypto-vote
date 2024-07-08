@@ -1,0 +1,5 @@
+<% if (locals.electionCount) { %>
+    <% for (var key in electionCount) { %>
+        <li><%= key %> : <%= electionCount[key] %></li>
+    <% } %>
+<% } %>

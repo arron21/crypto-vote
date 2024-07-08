@@ -4,9 +4,11 @@ const app = express()
 const port = 3000
 
 app.use(express.static('public'))
+app.set('views', './public')
+app.set('view engine', 'ejs')
+
 app.get('/', (req, res) => {
-  res.
-  res.sendFile('/public/index.html');
+  res.render('index.ejs')
 })
 
 
@@ -16,29 +18,37 @@ app.listen(port, () => {
 
 
 app.get('/mock-election', (req, res) => {
-  const results = mockElection(10)
-  res.send(results)
+  let count = req.query.count
+  if (typeof(count) !== Number) {
+    count = 10; //some default
+  }
+  let results = mockElection(count)
+  results.totalVotes = count;
+  res.render('index.ejs', { electionResults: results })
 })
 
 app.get('/create-voter', (req, res) => {
   const results = generateMockVote()
-  res.send(results)
+  res.render('index.ejs', { voterId : results })
 })
 
 app.get('/count-votes', (req, res) => {
   const results = countVotes()
-  res.send(results)
+  res.render('index.ejs', { electionCount: results })
 })
 
 app.get('/get-vote-by-id', (req, res) => {
   console.log("🚀 ~ app.get ~ req:", req.query)
   const voterId = req.query.id
   try {
-    const result = getVoteByName(id)
-    res.send(result)
+    const result = getVoteByName(voterId)
+    res.render('index.ejs', { voterInfo: result })
   } catch (error) {
     console.log("🚀 ~ app.get ~ error:", error)
-    res.send('The Voter ID does not exist, Are there any votes? Does your GET request have the correct ID? ex: http://localhost:3000/get-vote-by-id?id=23c16138-a31d-482c-a521-c388ad684780')
+    res.render('index.ejs', 
+      { voter : 
+        { error: 'The Voter ID does not exist, Are there any votes? Does your GET request have the correct ID? ex: http://localhost:3000/get-vote-by-id?id=23c16138-a31d-482c-a521-c388ad684780' }
+    })
   }
 })
 /**

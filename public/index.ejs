@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=<device-width>, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <a href='/'><h1>Blockchain Ranked Choice Voting</h1></a>
+    <ul>
+        <li>
+            <p>Run a Mock Election</p>
+            <form action="/mock-election" method="GET">
+                <input type="number" name="count">
+                <input type="submit" value="Run">
+            </form>
+            <div>
+                <%- include('./templates/mock-election-results'); %>
+            </div>
+        </li>
+        <li>
+            <form action="/create-voter" method="GET">
+                <input type="submit" value="Create Voter">
+            </form>
+            <div>
+                <%- include('./templates/create-voter'); %>
+            </div>
+        </li>
+        <li>
+            <form action="/count-votes" method="GET">
+                <input type="submit" value="Count Votes">
+            </form>
+            <div>
+                <%- include('./templates/count-votes'); %>
+            </div>
+        </li>
+        <li>
+            <p>Get Vote by ID/Name</p>
+            <form action="/get-vote-by-id" method="GET">
+                <input type="text" name="id" placeholder="Enter a voter ID">
+                <input type="submit" value="Get Voter Info">
+            </form>
+            <div>
+                <%- include('./templates/voter-info'); %>
+            </div>
+        </li>
+    </ul>
+</body>
+</html>
