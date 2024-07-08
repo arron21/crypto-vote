@@ -38,7 +38,9 @@ function generateMockVotes(count) {
   }
 
 function getVoteByName(name) {
-    const block = Chain.instance.chain.find(block => block.item.voterName === name);
+    const block = Chain.instance.chain.find(block => {
+      return block.item.voterName === name
+    })
     return block.item.item;
 }
 

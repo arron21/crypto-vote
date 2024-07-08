@@ -1,4 +1,4 @@
-const { mockElection, generateMockVote, countVotes } = require('./mockElection.js');
+const { mockElection, generateMockVote, countVotes, getVoteByName } = require('./mockElection.js');
 const express = require('express')
 const app = express()
 const port = 3000
@@ -28,6 +28,18 @@ app.get('/create-voter', (req, res) => {
 app.get('/count-votes', (req, res) => {
   const results = countVotes()
   res.send(results)
+})
+
+app.get('/get-vote-by-id', (req, res) => {
+  console.log("🚀 ~ app.get ~ req:", req.query)
+  const voterId = req.query.id
+  try {
+    const result = getVoteByName(id)
+    res.send(result)
+  } catch (error) {
+    console.log("🚀 ~ app.get ~ error:", error)
+    res.send('The Voter ID does not exist, Are there any votes? Does your GET request have the correct ID? ex: http://localhost:3000/get-vote-by-id?id=23c16138-a31d-482c-a521-c388ad684780')
+  }
 })
 /**
  * Entry point for the app
