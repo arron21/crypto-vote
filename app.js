@@ -1,7 +1,10 @@
 const { mockElection, generateMockVote, countVotes, getVoteByName } = require('./mockElection.js');
-const express = require('express')
+const express = require('express');
+const { StellarServer } = require('./stellar-server.js');
+
 const app = express()
 const port = 3000
+const stellarServer = new StellarServer();
 
 app.use(express.static('public'))
 app.get('/', (req, res) => {
@@ -9,11 +12,19 @@ app.get('/', (req, res) => {
   res.sendFile('/public/index.html');
 })
 
-
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
+  stellarServer.loadAccount();
 })
 
+app.get("/start-election", (req, res) => {
+  try {
+    stellarServer.startElection("foo", 60 * 1000, ['a', 'b', 'c']);
+    res.sendStatus(204);
+  } catch (error) {
+    res.sendStatus(400);
+  }
+})
 
 app.get('/mock-election', (req, res) => {
   const results = mockElection(10)
