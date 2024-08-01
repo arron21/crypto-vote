@@ -1,8 +1,17 @@
-const StellarSdk = require('@stellar/stellar-sdk');
-const horizonUrl = 'https://horizon-testnet.stellar.org';
+const {
+    Keypair,
+    Contract,
+    Operation,
+    SorobanRpc,
+    TransactionBuilder,
+    Networks,
+    BASE_FEE,
+} = require('@stellar/stellar-sdk');
+// const horizonUrl = 'https://horizon-testnet.stellar.org';
 const rpcUrl = 'https://soroban-testnet.stellar.org:443';
 
-const TEST_ACCOUNT = 'GDAYOSOILNQ7C5ZGR6QYFOLEDFWW5L766PPMBDLZ6UMM22MCMVJP6TEJ';
+const PUBLIC_KEY = 'GDAYOSOILNQ7C5ZGR6QYFOLEDFWW5L766PPMBDLZ6UMM22MCMVJP6TEJ';
+const PRIVATE_KEY = 'SBWD2UW73ZQ7XU5GXTG7LIZXYUOQ6KDK52RHVPITTFKIT2SHL3R74MOZ';
 
 class StellarServer {
     static server;
@@ -15,8 +24,7 @@ class StellarServer {
     ready = false;
     
     constructor() {
-        // this.server = new StellarSdk.Horizon.Server(horizonUrl);
-        this.server = new StellarSdk.SorobanRpc.Server(rpcUrl);
+        this.server = new SorobanRpc.Server(rpcUrl);
         this.loadAccount();
         this.loadWasmFiles();
     }
@@ -31,9 +39,8 @@ class StellarServer {
 
     async loadAccount() {
         try {
-            // this.keypair = StellarSdk.Keypair.fromPublicKey(TEST_ACCOUNT);
-            this.keypair = StellarSdk.Keypair.random();
-            this.account = await this.server.getAccount(TEST_ACCOUNT);
+            this.keypair = Keypair.fromSecret(PRIVATE_KEY);
+            this.account = await this.server.getAccount(PUBLIC_KEY);
             this.ready = true;
         } catch (error) {
             console.error("ERROR: Failed to initialize account state!", error);
@@ -48,7 +55,24 @@ class StellarServer {
         return this.electionAddress;
     }
 
-    //returns bool verifying election has started
+        //utility function
+    //returns a primed TransactionBuilder
+    getTxnBuilder() {
+        return new TransactionBuilder(
+            this.account, { fee: BASE_FEE, networkPassphrase: Networks.TESTNET }
+        ).setTimeout(100);
+    }
+
+    //utility function
+    //returns contractId of uploaded .wasm
+    async uploadWasm(txn, wasm) {
+        let built = txn.addOperation(Operation.uploadContractWasm({wasm: wasm})).build();
+        let prepared = await this.server.prepareTransaction(built);
+        prepared.sign(this.keypair);
+        return await this.server.sendTransaction(prepared);
+    }
+
+    //RPC run based on https://developers.stellar.org/docs/learn/encyclopedia/contract-development/contract-interactions/stellar-transaction
     //sets electionAddress for this StellarServer instance
     async startElection(electionName, durationInMillis, candidates) {
         if (!this.ready) {
@@ -56,201 +80,33 @@ class StellarServer {
             return;
         }
         try {
-            const fee = await this.server.fetchBaseFee();
-            let tb = await this.server.fetchTimebounds(100);
-            const electionTxn = this.getTxnBuilder(fee, tb);
-            this.electionAddress = await this.uploadWasm(electionTxn, this.electionWasm);
-            console.log(this.electionAddress);
+            const electionTxn = this.getTxnBuilder();
+            let sendRes = await this.uploadWasm(electionTxn, this.electionWasm);
+            if (sendRes.status === "PENDING") {
+                let getRes = await this.server.getTransaction(sendRes.hash);
+                while (getRes.status === "NOT_FOUND") {
+                    console.log("Waiting for txn confirmation");
+                    getRes = await this.server.getTransaction(sendRes.hash);
+                    await new Promise((resolve) => setTimeout(resolve, 1000));
+                }
+                console.log('txn complete', JSON.stringify(getRes));
 
-            let endTime = new Date();
-            endTime.setMilliseconds(endTime.getMilliseconds() + durationInMillis);
-
-            let startTxn = this.getTxnBuilder(fee, tb);
-            startTxn.addOperation(
-                StellarSdk.Operation.invokeContractFunction({
-                    contract: this.electionAddress,
-                    function: "start_election",
-                    args: StellarSdk.nativeToScVal(endTime.getMilliseconds(), {type: 'number'})
-                })
-            ).build();
-            txn.sign(this.keypair);
-            await server.submitAsyncTransaction(startElection);
+                if (getRes.status === "SUCCESS") {
+                    if (!getRes.resultMetaXdr) {
+                        throw "Empty resultMetaXDR in getTxn response";
+                    }
+                    let txnMeta = getRes.resultMetaXdr;
+                    let txnVal = getRes.returnValue;
+                    console.log('Txn result:', txnVal.value());
+                } else {
+                    throw `Txn failed: ${getRes.resultXdr}`;
+                }
+            } else {
+                throw sendRes.errorResultXdr;
+            }
         } catch (error) {
             console.error("Error! Could not start election.", error);
         }
-    }
-
-    //returns bool
-    async electionInProgress(electionAddress) {
-        if (!this.ready) {
-            console.warn("Warning: StellarServer not ready yet.");
-        }
-        try {
-            const fee = await this.server.fetchBaseFee();
-            const txn = this.getTxnBuilder(fee);
-            txn.addOperation(
-                StellarSdk.Operation.invokeContractFunction({
-                    contract: electionAddress,
-                    function: "in_progress"
-                })
-            ).build();
-            txn.sign(this.keypair);
-            return await server.submitAsyncTransaction(txn);
-        } catch (error) {
-            console.error("Error! Could not verify election in progress", error);
-        }
-    }
-
-    //generates ballot ledger
-    //returns ballotAddress
-    async generateBallot(electionAddress) {
-        if (!this.ready) {
-            console.warn("Warning: Election not ready yet.");
-        }
-        try {
-            let fee = await this.server.fetchBaseFee();
-            let tb = await this.server.fetchTimebounds(100);
-            const txn = this.getTxnBuilder(fee, tb);
-            let ballotAddress = await this.uploadWasm(txn, this.ballotWasm);
-
-            // tb = await this.server.fetchTimebounds(100);
-            const initTxn = this.getTxnBuilder(fee, tb);
-            initTxn.addOperation(
-                StellarSdk.Operation.invokeContractFunction({
-                    contract: this.ballotAddress,
-                    function: "initialize"
-                })
-            ).build();
-            txn.sign(this.keypair);
-            await server.submitAsyncTransaction(initTxn);
-            return ballotAddress;
-        } catch (error) {
-            console.error("Error! Could not generate ballot", error);
-        }
-    }
-
-    //adds ballot ledger to election ledger
-    //returns length of ballotAddresses for simple verification
-    async addBallotToElection(electionAddress, ballotAddress) {
-        if (!this.ready) {
-            console.warn("Warning!: Election not ready yet.");
-            return;
-        }
-        try {
-            let fee = await this.server.fetchBaseFee();
-            let tb = await this.server.fetchTimebounds(100);
-            const txn = this.getTxnBuilder(fee, tb);
-            txn.addOperation(
-                StellarSdk.Operation.invokeContractFunction({
-                    contract: electionAddress,
-                    function: "add_ballot",
-                    args: {
-                        "ballot_id": StellarSdk.nativeToScVal(ballotAddress, {type: 'Address'})
-                    }
-                })
-            ).build();
-            txn.sign(this.keypair);
-            await server.submitAsyncTransaction(initTxn);
-            //potentially inaccurate/naive state. for important operations fetch from election ledger directly
-            this.ballotAddresses.push(ballotAddress);
-            return this.ballotAddresses.length;
-        } catch (error) {
-            console.error("Error! Could not add ballot to election", error);
-        }
-    }
-
-    //returns bool
-    async hasVoted(ballotAddress) {
-        if (!this.ready) {
-            console.warn("Warning!: Election not ready yet.");
-            return;
-        }
-        try {
-            let fee = await this.server.fetchBaseFee();
-            let tb = await this.server.fetchTimebounds(100);
-            const txn = this.getTxnBuilder(fee, tb);
-            txn.addOperation(
-                StellarSdk.Operation.invokeContractFunction({
-                    contract: ballotAddress,
-                    function: "has_voted"
-                })
-            ).build();
-            txn.sign(this.keypair);
-            return await server.submitAsyncTransaction(txn);
-        } catch(error) {
-            console.error("Error! Could not verify if ballot has voted", error);
-        }
-    }
-
-    //votes must have string keys with int values
-    //TODO: verify that votes gets passed correctly. may need to update keys from Symbol to String
-    //returns bool
-    async submitVote(ballotAddress, votes) {
-        if (!this.ready) {
-            console.warn("Warning! Election not ready yet.");
-            return;
-        }
-        try {
-            let fee = await this.server.fetchBaseFee();
-            let tb = await this.server.fetchTimebounds(100);
-            const txn = this.getTxnBuilder(fee, tb);
-            
-            txn.addOperation(
-                StellarSdk.Operation.invokeContractFunction({
-                    contract: ballotAddress,
-                    function: "vote",
-                    args: {
-                        "votes": StellarSdk.nativeToScVal(votes)
-                    }
-                })
-            ).build();
-            txn.sign(this.keypair);
-            await server.submitAsyncTransaction(txn);
-        } catch (error) {
-            console.error("Error! Could not submit votes to ballot with id", ballotAddress, error);
-        }
-    }
-
-    //returns votes object associated with provided ballotAddress
-    async getVotes(ballotAddress) {
-        if (!this.ready) {
-            console.warn("Warning! Election not ready yet.");
-            return;
-        }
-        try {
-            let fee = await this.server.fetchBaseFee();
-            let tb = await this.server.fetchTimebounds(100);
-            const txn = this.getTxnBuilder(fee, tb);
-            txn.addOperation(
-                StellarSdk.Operation.invokeContractFunction({
-                    contract: ballotAddress,
-                    function: "get_votes",
-                })
-            ).build();
-            txn.sign(this.keypair);
-            return await server.submitAsyncTransaction(txn);
-        } catch (error) {
-            console.error("Error! Couldn't fetch votes for ballot with ID", ballotAddress, error);
-        }
-    }
-
-    //utility function
-    //returns a primed TransactionBuilder
-    getTxnBuilder(fee, timebounds) {
-        return new StellarSdk.TransactionBuilder(
-            this.account, { fee: fee, networkPassphrase: StellarSdk.Networks.TESTNET, timebounds: timebounds }
-        );
-    }
-
-    //utility function
-    //returns contractId of uploaded .wasm
-    async uploadWasm(txn, wasm) {
-        txn.addOperation(StellarSdk.Operation.uploadContractWasm({wasm: wasm})).build();
-        // txn.sign(this.keypair);
-        // this.keypair.sign(txn);
-        // let prepared = this.server.prepareTransaction(txn);
-        // this.keypair.sign(prepared);
-        return await this.server.submitTransaction(txn);
     }
 }
 
