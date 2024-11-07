@@ -9,14 +9,12 @@ app.get('/', (req, res) => {
   res.sendFile('/public/index.html');
 })
 
-
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
 })
 
-
 app.get('/mock-election', (req, res) => {
-  const results = mockElection(10)
+  const results = mockElection(100)
   res.send(results)
 })
 
