@@ -13,15 +13,18 @@ function generateMockVoter(voteObj) {
   // we need to create a way for a voter to access their ballot after it's been created
   // maybe a UUID that is returned to the voter... ideally something like a SSN would be "best"
   const randomVoterId = randomUUID()
-  console.log("🚀 ~ generateMockVoter ~ randomVoterId:", randomVoterId)
+  console.log("randomVoterId:", randomVoterId)
+  console.log('is voting for:', voteObj)
   new Ballot(randomVoterId).sendItem(voteObj, GLOBAL_BALLOT.publicKey);
   // console.log('voter ballot '+ voter_ballot)
   return 'this is your unique voter ID, save it so you can view your vote later: ' + randomVoterId
 }
 
 function generateMockVote() {
-  const candidates = ['alpha', 'beta', 'gamma'];
-    const values = [1, 2, 3];
+    // const candidates = ['bush', 'gore'];
+    // const values = [1, 2];
+    const candidates = ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta',  'upsilon', 'omega'];
+    const values = [1, 2, 3, 4, 5, 6, 7, 8];
     const obj = {};
     candidates.forEach(prop => {
       const randomIndex = Math.floor(Math.random() * values.length);
@@ -52,8 +55,6 @@ function mockElection(voterCount) {
 function countVotes() { 
   return GLOBAL_CHAIN.countVotes();
 }
-
-
 
 module.exports = {
     generateMockVotes,
